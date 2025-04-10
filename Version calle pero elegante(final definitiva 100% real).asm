@@ -1,7 +1,7 @@
 .data
 prompt:         .asciiz "Ingrese el número de filas: "
 hanoi_prompt:   .asciiz "Ingrese número de discos para Hanoi: "
-menu_prompt:    .asciiz "\nMenu:\n1. Generar (Combinatorio)\n2. Generar (Iterativo)\n3. Imprimir\n4. Torres Hanoi\n5. Salir\nSeleccione opcion: "
+menu_prompt:    .asciiz "\nMenu:\n1. Generar (Recursivo)\n2. Generar (Iterativo)\n3. Imprimir\n4. Torres Hanoi\n5. Salir\nSeleccione opcion: "
 space:          .asciiz " "
 newline:        .asciiz "\n"
 no_rows:        .asciiz "Primero debe generar el triangulo!\n"
@@ -31,15 +31,15 @@ menu:
     move $s0, $v0
 
     # Manejar opción
-    beq $s0, 1, generar_combinatorio
+    beq $s0, 1, generar_recursivo
     beq $s0, 2, generar_iterativo
     beq $s0, 3, imprimir
     beq $s0, 4, hanoi
     beq $s0, 5, salir
     j menu
 
-# ========== TRIÁNGULO DE PASCAL (CÓDIGO ORIGINAL) ==========
-generar_combinatorio:
+# Triangulo de pascal chaval
+generar_recursivo:
     # Pedir filas
     li $v0, 4
     la $a0, prompt
@@ -52,10 +52,10 @@ generar_combinatorio:
     li $t0, 0
     lw $t1, num_rows
 
-loop_i_comb:
+llamada_recursiva:
     bge $t0, $t1, volver_menu
     
-    # Reservar memoria
+    # Reservar memoria por que no es como que la regalen
     addi $a0, $t0, 1
     sll $a0, $a0, 2
     li $v0, 9
@@ -72,8 +72,8 @@ loop_i_comb:
     sw $t2, 0($v0)
     li $t3, 1
 
-loop_k_comb:
-    bgt $t3, $t0, next_i_comb
+llamada_recursiva_2:
+    bgt $t3, $t0, proximo_i
     
     sub $t4, $t0, $t3
     addiu $t4, $t4, 1
@@ -86,11 +86,11 @@ loop_k_comb:
     sw $t2, 0($t4)
     
     addiu $t3, $t3, 1
-    j loop_k_comb
+    j llamada_recursiva_2
 
-next_i_comb:
+proximo_i:
     addiu $t0, $t0, 1
-    j loop_i_comb
+    j llamada_recursiva
 
 generar_iterativo:
     # Pedir filas
@@ -105,7 +105,7 @@ generar_iterativo:
     li $t0, 0
     lw $t1, num_rows
 
-loop_i_iter:
+ciclo_iterativo_llamada:
     bge $t0, $t1, volver_menu
     
     # Reservar memoria
@@ -134,8 +134,8 @@ loop_i_iter:
     li $t5, 0
     li $t6, 1
 
-loop_j_iter:
-    bgt $t5, $t0, next_i_iter
+ciclo_iterativo:
+    bgt $t5, $t0, proximo_i_iterativo
     
     beqz $t5, set_one
     beq $t5, $t0, set_one
@@ -162,15 +162,15 @@ guardar_valor:
     sw $t6, 0($t7)
     
     addiu $t5, $t5, 1
-    j loop_j_iter
+    j ciclo_iterativo
 
 primera_fila:
     li $t3, 1
     sw $t3, 0($v0)
 
-next_i_iter:
+proximo_i_iterativo:
     addiu $t0, $t0, 1
-    j loop_i_iter
+    j ciclo_iterativo_llamada
 
 imprimir:
     lw $t0, num_rows
@@ -178,7 +178,7 @@ imprimir:
     
     li $t1, 0
 
-print_loop:
+imprimir_ciclo:
     bge $t1, $t0, volver_menu
     
     la $t2, row_ptrs
@@ -210,14 +210,14 @@ nueva_linea:
     syscall
     
     addiu $t1, $t1, 1
-    j print_loop
+    j imprimir_ciclo
 
 error_sin_filas:
     li $v0, 4
     la $a0, no_rows
     syscall
 
-# ========== TORRES DE HANOI (NUEVA FUNCIONALIDAD) ==========
+# Las torres de Hanoi(donde llore 1 hora)
 hanoi:
     # Pedir número de discos
     li $v0, 4
@@ -258,10 +258,7 @@ hanoi_recursivo:
     sw $a1, 8($sp)      # origen
     sw $a2, 12($sp)     # destino
     sw $a3, 16($sp)     # auxiliar
-
-    beq $a0, 1, hanoi_base_case
-    
-    # Hanoi(n-1, origen, auxiliar, destino)
+    beq $a0, 1, hanoi_base_case    
     addi $a0, $a0, -1
     lw $t0, 12($sp)     # Intercambiar destino y auxiliar
     lw $t1, 16($sp)
@@ -288,14 +285,13 @@ hanoi_base_case:
     syscall
 
     lw $a0, 4($sp)      # Recuperar n original
-    bgt $a0, 1, hanoi_continue
+    bgt $a0, 1, torres_de_hanoi
     
     lw $ra, 0($sp)
     addi $sp, $sp, 20
     jr $ra
 
-hanoi_continue:
-    # Hanoi(n-1, auxiliar, destino, origen)
+torres_de_hanoi:
     addi $a0, $a0, -1
     lw $t0, 16($sp)     # Intercambiar origen y auxiliar
     lw $t1, 8($sp)
@@ -307,10 +303,11 @@ hanoi_continue:
     addi $sp, $sp, 20
     jr $ra
 
-# ========== FUNCIONES COMUNES ==========
+# Funciones para salir o retornar
 volver_menu:
     j menu
 
 salir:
     li $v0, 10
-    syscall
+    
+
